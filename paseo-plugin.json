@@ -1,0 +1,6 @@
+{
+  "id": "chat-view",
+  "requirements": {
+    "paseo": ">=0.10.3 <0.12.0"
+  }
+}
