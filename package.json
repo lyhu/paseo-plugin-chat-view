@@ -1,14 +1,17 @@
 {
-  "name": "chat-view",
+  "name": "paseo-plugin-chat-view",
   "version": "0.1.0",
-  "private": true,
+  "license": "MIT",
   "description": "Sticky questions and compact agent activity inside Paseo conversations",
   "files": [
     "paseo-plugin.json",
     "index.client.tsx",
     "index.server.ts",
+    "LICENSE",
     "LICENSE.compact-agent-activity",
     "LICENSE.mermaid",
+    "README.md",
+    "README_zh.md",
     "client/",
     "server/",
     "shared/"
