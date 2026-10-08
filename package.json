@@ -1,8 +1,8 @@
 {
   "name": "paseo-plugin-chat-view",
-  "version": "0.1.0",
-  "license": "MIT",
+  "version": "0.1.1",
   "description": "Sticky questions and compact agent activity inside Paseo conversations",
+  "license": "MIT",
   "files": [
     "paseo-plugin.json",
     "index.client.tsx",
@@ -23,16 +23,18 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check ."
   },
-  "devDependencies": {
+  "dependencies": {
     "@getpaseo/client": "0.10.3",
-    "@getpaseo/plugin": "0.10.3",
     "@getpaseo/protocol": "0.10.3",
+    "prismjs": "^1.30.0"
+  },
+  "devDependencies": {
+    "@getpaseo/plugin": "0.10.3",
     "@types/node": "^22.20.5",
     "@types/prismjs": "^1.26.6",
     "@types/react": "~19.1.0",
     "oxfmt": "0.46.0",
     "oxlint": "1.61.0",
-    "prismjs": "^1.30.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
