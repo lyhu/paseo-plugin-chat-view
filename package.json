@@ -1,6 +1,6 @@
 {
   "name": "paseo-plugin-chat-view",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Sticky questions and compact agent activity inside Paseo conversations",
   "license": "MIT",
   "files": [
