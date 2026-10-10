@@ -173,7 +173,7 @@ it("shows after a stable absence and hides immediately when any part becomes vis
   expect(bar.style.display).toBe("none");
   vi.advanceTimersByTime(100);
   flushFrame();
-  expect(bar.style.display).toBe("block");
+  expect(bar.style.display).toBe("flex");
   prompt.message!.rect.bottom = 0.1;
   change();
   expect(bar.style.display).toBe("none");
@@ -214,17 +214,60 @@ it("keeps visible prompts hidden at the bottom and cancels pending shows on clea
   expect(bar.style.display).toBe("none");
 });
 
-it("relabels the bar when the plugin language changes", () => {
+it("shows only the question body, three lines tall, with the copy button beside it", () => {
+  const { bar, prompt, change } = setup();
+  prompt.message!.rect.top = -40;
+  prompt.message!.rect.bottom = 0;
+  change();
+  vi.advanceTimersByTime(100);
+  flushFrame();
+  expect(bar.style.display).toBe("flex");
+  // The hover <style>, the text block, and the copy button: no label line, no toggle row.
+  expect(bar.children).toHaveLength(3);
+  const [style, message, copy] = bar.children;
+  expect(style!.textContent).toContain("[data-sticky-copy]");
+  const [text, ellipsis] = message!.children;
+  expect(text!.style.maxHeight).toBe("63px");
+  // Vertical padding is trimmed to 4px so the strip is three lines plus a little air.
+  expect(bar.style.paddingTop || bar.style.padding).toBe("4px 16px");
+  // The mock text always overflows its box, so the plugin-drawn ellipsis stands in for "…".
+  expect(ellipsis!.textContent).toBe("…");
+  expect(ellipsis!.style.display).toBe("block");
+  expect(bar.style.cursor).toBe("pointer");
+  expect(copy!.style.flexShrink).toBe("0");
+});
+
+it("expands and collapses the question when the bar itself is clicked", () => {
+  const { bar, prompt, change } = setup();
+  prompt.message!.rect.top = -40;
+  prompt.message!.rect.bottom = 0;
+  change();
+  vi.advanceTimersByTime(100);
+  flushFrame();
+  const [message] = bar.children.slice(1);
+  const [text, ellipsis] = message!.children;
+  expect(text!.style.maxHeight).toBe("63px");
+  bar.events.get("click")!();
+  flushFrame();
+  expect(Number.parseFloat(text!.style.maxHeight)).toBeGreaterThan(63);
+  expect(text!.style.overflowY).toBe("auto");
+  expect(ellipsis!.style.display).toBe("none");
+  bar.events.get("click")!();
+  flushFrame();
+  expect(text!.style.maxHeight).toBe("63px");
+  expect(text!.style.overflowY).toBe("hidden");
+  expect(ellipsis!.style.display).toBe("block");
+});
+
+it("relabels the bar and its copy button when the plugin language changes", () => {
   const { bar } = setup();
-  // Bar children in order: the hover <style>, the label, the message, then the action row.
-  const [, label, , actions] = bar.children;
-  const [toggle, copy] = actions!.children;
-  expect(label!.textContent).toBe("当前提问");
+  // Bar children in order: the hover <style>, the message, then the copy button.
+  const [, , copy] = bar.children;
   expect(copy!.getAttribute("aria-label")).toBe("复制当前提问");
+  expect(bar.getAttribute("aria-label")).toBe("展开当前提问全文");
   setLocalePreference("en-US");
   flushFrame();
-  expect(label!.textContent).toBe("Current Question");
   expect(copy!.getAttribute("aria-label")).toBe("Copy current question");
-  expect(toggle!.getAttribute("aria-label")).toBe("Expand full question");
+  expect(bar.getAttribute("aria-label")).toBe("Expand full question");
   setLocalePreference("zh-CN");
 });

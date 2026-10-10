@@ -29,12 +29,12 @@
 
 ## Core Features
 
-| Feature                   | Description                                                                                                                             | Highlights                                                                                              |
-| :------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------ |
-| 📌 **Sticky Questions**   | Pins the current turn's user question to the top of the viewport while scrolling through a long conversation.                           | 100ms viewport debounce, native visual inheritance, default 3-line auto fold, one-click full-text copy. |
-| ⚡ **Compact Activity**   | Shows a single-line activity summary by default (compact-agent-activity Folded mode); a click expands thoughts and tool details inline. | Smooth reasoning text, click-to-expand command output, code diffs, first-frame syntax highlighting.     |
-| 📊 **Mermaid Diagrams**   | Built-in Mermaid parser and renderer that turns diagram code blocks into high-quality visual charts.                                    | 25%–400% free zoom, fit-to-width, seamless source/diagram toggle, full-screen preview.                  |
-| ✨ **Prompt Enhancement** | Rewrites a vague composer request into an executable prompt complete with goal / scope / constraints / acceptance, and writes it back.  | One-click enhance, project-environment aware, click again to undo to the original text.                 |
+| Feature                   | Description                                                                                                                             | Highlights                                                                                                               |
+| :------------------------ | :-------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------- |
+| 📌 **Sticky Questions**   | Pins the current turn's user question to the top of the viewport while scrolling through a long conversation.                           | 100ms viewport debounce, native visual inheritance, 3-line default with click-anywhere expand, one-click full-text copy. |
+| ⚡ **Compact Activity**   | Shows a single-line activity summary by default (compact-agent-activity Folded mode); a click expands thoughts and tool details inline. | Smooth reasoning text, click-to-expand command output, code diffs, first-frame syntax highlighting.                      |
+| 📊 **Mermaid Diagrams**   | Built-in Mermaid parser and renderer that turns diagram code blocks into high-quality visual charts.                                    | 25%–400% free zoom, fit-to-width, seamless source/diagram toggle, full-screen preview.                                   |
+| ✨ **Prompt Enhancement** | Rewrites a vague composer request into an executable prompt complete with goal / scope / constraints / acceptance, and writes it back.  | One-click enhance, project-environment aware, click again to undo to the original text.                                  |
 
 > [!NOTE]
 > **Design philosophy**: zero backend intrusion and strictly built on the public Paseo SDK; user questions and ordinary assistant answers keep Paseo's native fork and copy functionality in full.
@@ -103,7 +103,7 @@ While reading a long assistant response, you can see the question for the curren
 
 ```text
 +--------------------------------------------------------------+
-| [User question excerpt (up to 3 lines)...]            [More... / 📋] | <- Sticky bar (same width as the message body)
+| [User question excerpt (up to 3 lines)...]                [📋] | <- Sticky bar (same width as the message body)
 +--------------------------------------------------------------+
 | (Assistant answer for this turn / tool execution keeps scrolling...) |
 | ...                                                          |
@@ -119,9 +119,10 @@ While reading a long assistant response, you can see the question for the curren
   - A **~100ms absence confirmation** eliminates flicker during virtual-list repaints or boundary scrolling.
   - The rule is the same at the very bottom of a conversation: the bar stays pinned only once the question has left the viewport.
 - **Visual style and adaptation**:
-  - The sticky bar aligns exactly with the message body width and fully inherits the native user bubble's background color, corner radius, padding, and font, adapting seamlessly to light and dark themes.
-  - **Adaptive folding**: shows at most 3 lines by default and offers a "More…" action for the rest; once expanded it scrolls independently inside the area and can be collapsed with "Show less". Switching turns resets it to the collapsed state.
-  - **Lossless full-text copy**: a copy icon embedded at the bar's bottom-right copies the complete question text of that turn (including the hidden part); it highlights slightly on hover and switches to a check mark for about 1.8 seconds after copying.
+  - The sticky bar aligns exactly with the message body width and inherits the native user bubble's background color, corner radius, horizontal padding, and font, adapting seamlessly to light and dark themes.
+  - **Three lines tall and nothing else**: the bar has no title row and its vertical padding is trimmed to 4px, so its height is the question text clamped to three lines plus that small breathing space; the copy icon sits beside the text and adds no height.
+  - **Click anywhere to expand**: clicking the bar itself (anywhere but the copy icon) expands the full question and clicking again folds it back to three lines, scrolling independently once expanded. When more than three lines remain, the plugin draws a "…" at the end of the last line; a question that already fits does not react to clicks and keeps the default cursor.
+  - **Lossless full-text copy**: the copy icon copies the complete question text of that turn (including the hidden part); it highlights slightly on hover and switches to a check mark for about 1.8 seconds after copying.
 
 ### 2. Compact Activity
 

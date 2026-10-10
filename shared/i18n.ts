@@ -73,9 +73,6 @@ export const messages = {
 
     // 吸顶提问 (Sticky Questions)
     "sticky.pill": "吸顶提问",
-    "sticky.label": "当前提问",
-    "sticky.more": "更多…",
-    "sticky.collapse": "收起",
     "sticky.copy": "复制当前提问",
     "sticky.copied": "已复制",
     "sticky.copyFailed": "复制失败，请重试",
@@ -199,9 +196,6 @@ export const messages = {
 
     // Sticky Questions
     "sticky.pill": "Sticky Questions",
-    "sticky.label": "Current Question",
-    "sticky.more": "More…",
-    "sticky.collapse": "Collapse",
     "sticky.copy": "Copy current question",
     "sticky.copied": "Copied",
     "sticky.copyFailed": "Copy failed, please retry",

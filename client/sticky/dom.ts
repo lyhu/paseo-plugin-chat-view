@@ -26,6 +26,8 @@ export type ResolveStickyPrompt = (
 
 const SCROLL_SELECTOR = '[data-testid="agent-chat-scroll"]';
 const ROW_SELECTOR = "[data-history-row-id], [data-chat-view-hidden-row-id]";
+/** Text and copy button sit side by side, so flex is the bar's visible display. */
+const SHOWN_DISPLAY = "flex";
 export interface StickyColors {
   background: string;
   foreground: string;
@@ -68,7 +70,7 @@ export function installStickyMessages(
   }
 
   let overlay:
-    | { bar: Element; label: Element; text: Element; toggle: Element; resetCopy: () => void }
+    | { bar: Element; text: Element; ellipsis: Element; resetCopy: () => void }
     | undefined;
   let copyResetTimer: ReturnType<typeof setTimeout> | undefined;
   let showTimer: ReturnType<typeof setTimeout> | undefined;
@@ -80,14 +82,18 @@ export function installStickyMessages(
   let lastContentBounds: { left: number; width: number } | undefined;
   const appliedStyles: Record<string, string> = {};
   let expanded = false;
+  let clampedOverflowing = false;
+  let ellipsisBackground: string | undefined;
   let displayedPromptId: string | undefined;
   let textLineHeight = 21;
+  // The strip is exactly as tall as three text lines plus a small breathing space, so the bubble's
+  // padding is trimmed to 4px vertically; the label and the old action row are gone entirely.
   let userAppearance: Record<string, string> = {
     backgroundColor: colors.background,
     border: "0",
     borderRadius: "16px",
     borderTopRightRadius: "2px",
-    padding: "16px",
+    padding: "4px 16px",
   };
 
   function cancelPendingShow() {
@@ -119,12 +125,17 @@ export function installStickyMessages(
       }
       const text = window.getComputedStyle(message);
       textLineHeight = Number.parseFloat(text.lineHeight ?? "") || 21;
-      if (overlay)
+      // Keep a little air around the three lines instead of the bubble's full padding.
+      userAppearance.paddingTop = "4px";
+      userAppearance.paddingBottom = "4px";
+      if (overlay) {
         Object.assign(overlay.text.style, {
           fontSize: text.fontSize,
           lineHeight: `${textLineHeight}px`,
           fontFamily: text.fontFamily,
         });
+        overlay.ellipsis.style.lineHeight = `${textLineHeight}px`;
+      }
     }
     return userAppearance;
   }
@@ -137,33 +148,39 @@ export function installStickyMessages(
       overlay.resetCopy();
       overlay.text.scrollTop = 0;
     }
-    overlay.text.style.WebkitLineClamp = expanded ? "unset" : "3";
-    overlay.text.style.display = expanded ? "block" : "-webkit-box";
     overlay.text.style.maxHeight = expanded
       ? `${Math.max(textLineHeight * 3, viewportHeight - 96)}px`
       : `${textLineHeight * 3}px`;
     overlay.text.style.overflowY = expanded ? "auto" : "hidden";
     const overflowing = overlay.text.scrollHeight > overlay.text.clientHeight + 1;
-    overlay.toggle.style.display = expanded || overflowing ? "block" : "none";
+    // Only the collapsed measurement decides whether the bar has anything to disclose; while
+    // expanded the scroll height reflects the taller box instead.
+    if (!expanded) clampedOverflowing = overflowing;
+    overlay.ellipsis.style.display = !expanded && clampedOverflowing ? "block" : "none";
+    overlay.bar.style.cursor = clampedOverflowing || expanded ? "pointer" : "default";
     describeDisclosure();
   }
 
-  /** The toggle's own wording, set by a new frame and by a language change alike. */
+  /** The bar is its own disclosure control, so its wording is set by a new frame and by a language change alike. */
   function describeDisclosure() {
     if (!overlay) return;
-    const title = expanded ? tr("sticky.collapse") : tr("sticky.more");
-    if (overlay.toggle.textContent !== title) overlay.toggle.textContent = title;
-    overlay.toggle.setAttribute(
-      "aria-label",
-      expanded ? tr("sticky.ariaCollapse") : tr("sticky.ariaExpand"),
-    );
-    overlay.toggle.setAttribute("aria-expanded", String(expanded));
+    const description = expanded ? tr("sticky.ariaCollapse") : tr("sticky.ariaExpand");
+    if (overlay.bar.getAttribute("aria-label") !== description) {
+      overlay.bar.setAttribute("aria-label", description);
+      overlay.bar.setAttribute("title", description);
+    }
+  }
+
+  function toggleExpanded() {
+    // A question that fits in three lines has nothing to disclose.
+    if (!expanded && !clampedOverflowing) return;
+    expanded = !expanded;
+    schedule();
   }
 
   /** Static overlay text lives in nodes created once, so a language change rewrites it here. */
   function relabelOverlay() {
     if (!overlay) return;
-    overlay.label.textContent = tr("sticky.label");
     overlay.resetCopy();
     describeDisclosure();
   }
@@ -239,12 +256,18 @@ export function installStickyMessages(
     const bar = document.createElement("div");
     bar.setAttribute("data-conversation-sticky-message", "true");
     bar.setAttribute("role", "note");
+    // The whole strip is the disclosure control; it stays focusable for keyboard users.
+    bar.setAttribute("tabindex", "0");
+    bar.setAttribute("aria-label", tr("sticky.ariaExpand"));
+    bar.setAttribute("title", tr("sticky.ariaExpand"));
     Object.assign(bar.style, {
       position: "absolute",
       zIndex: "20",
       boxSizing: "border-box",
       display: "none",
-      padding: "10px 16px",
+      alignItems: "center",
+      gap: "6px",
+      padding: "4px 16px",
       pointerEvents: "auto",
       border: "1px solid",
       borderRadius: "8px",
@@ -252,23 +275,31 @@ export function installStickyMessages(
       fontFamily: "inherit",
       lineHeight: "20px",
     });
-    const label = document.createElement("div");
-    label.textContent = tr("sticky.label");
-    Object.assign(label.style, { fontSize: "11px", lineHeight: "16px", marginBottom: "2px" });
-    label.style.color = colors.muted;
+    // No line-clamp: the third line is cut by max-height and the "…" marker is drawn by the
+    // plugin, so the collapsed state always ends in a visible ellipsis.
     const text = document.createElement("div");
     Object.assign(text.style, {
       fontSize: "15px",
       lineHeight: "21px",
       whiteSpace: "pre-wrap",
       overflowWrap: "anywhere",
-      display: "-webkit-box",
-      WebkitBoxOrient: "vertical",
-      WebkitLineClamp: "3",
       overflow: "hidden",
     });
     const message = document.createElement("div");
-    Object.assign(message.style, { minWidth: "0" });
+    Object.assign(message.style, { minWidth: "0", flex: "1 1 auto", position: "relative" });
+    const ellipsis = document.createElement("span");
+    ellipsis.setAttribute("data-sticky-ellipsis", "true");
+    ellipsis.setAttribute("aria-hidden", "true");
+    ellipsis.textContent = "…";
+    Object.assign(ellipsis.style, {
+      display: "none",
+      position: "absolute",
+      right: "0",
+      bottom: "0",
+      paddingLeft: "12px",
+      lineHeight: "21px",
+      pointerEvents: "none",
+    });
     const copy = document.createElement("button");
     copy.setAttribute("type", "button");
     copy.setAttribute("data-sticky-copy", "true");
@@ -279,7 +310,6 @@ export function installStickyMessages(
       alignItems: "center",
       justifyContent: "center",
       flexShrink: "0",
-      marginLeft: "auto",
       width: "24px",
       height: "24px",
       padding: "5px",
@@ -338,7 +368,9 @@ export function installStickyMessages(
       copy.setAttribute("title", tr("sticky.copy"));
       copy.setAttribute("aria-label", tr("sticky.copy"));
     }
-    copy.addEventListener("click", () => {
+    copy.addEventListener("click", (event) => {
+      // Copying is not a disclosure gesture.
+      (event as { stopPropagation?: () => void } | null)?.stopPropagation?.();
       const copiedText = text.textContent ?? "";
       resetCopy();
       void copyText(copiedText).then(
@@ -354,38 +386,18 @@ export function installStickyMessages(
       );
     });
     message.appendChild(text);
-    const toggle = document.createElement("button");
-    toggle.setAttribute("type", "button");
-    toggle.setAttribute("aria-label", tr("sticky.ariaExpand"));
-    Object.assign(toggle.style, {
-      display: "none",
-      border: "0",
-      background: "transparent",
-      color: colors.foreground,
-      fontSize: "12px",
-      lineHeight: "20px",
-      padding: "4px 0 0",
-      cursor: "pointer",
+    message.appendChild(ellipsis);
+    bar.addEventListener("click", () => toggleExpanded());
+    bar.addEventListener("keydown", (event) => {
+      const key = (event as { key?: string } | null)?.key;
+      if (key !== "Enter" && key !== " ") return;
+      (event as { preventDefault?: () => void }).preventDefault?.();
+      toggleExpanded();
     });
-    toggle.addEventListener("click", () => {
-      expanded = !expanded;
-      schedule();
-    });
-    bar.appendChild(label);
     bar.appendChild(message);
-    const actions = document.createElement("div");
-    Object.assign(actions.style, {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "8px",
-      marginTop: "4px",
-    });
-    actions.appendChild(toggle);
-    actions.appendChild(copy);
-    bar.appendChild(actions);
+    bar.appendChild(copy);
     parent.appendChild(bar);
-    return { bar, label, text, toggle, resetCopy };
+    return { bar, text, ellipsis, resetCopy };
   }
 
   function update() {
@@ -417,7 +429,7 @@ export function installStickyMessages(
     }
     // A virtualized row may disappear for a frame. Hide immediately when the prompt is visible,
     // but require a stable absence before showing the bar to avoid flashing during reconciliation.
-    if (overlay.bar.style.display !== "block") {
+    if (overlay.bar.style.display !== SHOWN_DISPLAY) {
       if (pendingPromptId !== prompt.id) {
         cancelPendingShow();
         pendingPromptId = prompt.id;
@@ -436,7 +448,7 @@ export function installStickyMessages(
     const bounds = contentBounds(rows[readingIndex], viewport.left);
     const topOffset = Math.round(viewport.top - parentRect.top - parent.clientTop);
     const styles = {
-      display: "block",
+      display: SHOWN_DISPLAY,
       top: `${Math.abs(topOffset) <= 1 ? 0 : topOffset}px`,
       left: `${bounds.left - parentRect.left - parent.clientLeft}px`,
       width: `${bounds.width}px`,
@@ -453,6 +465,11 @@ export function installStickyMessages(
       }
     }
     if (overlay.text.textContent !== prompt.text) overlay.text.textContent = prompt.text;
+    // The "…" marker sits on the cut third line, so it paints the bar's own colour underneath.
+    if (ellipsisBackground !== styles.backgroundColor) {
+      ellipsisBackground = styles.backgroundColor;
+      overlay.ellipsis.style.backgroundColor = styles.backgroundColor;
+    }
     updateDisclosure(prompt, viewport.height);
   }
   function schedule() {
